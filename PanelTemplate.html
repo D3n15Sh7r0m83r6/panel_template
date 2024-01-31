@@ -1,0 +1,937 @@
+<head>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #root {
+            display: flex;
+            background-color: #ffba92;
+            padding: 16px;
+            box-sizing: border-box;
+            height: 100%;
+            gap: 16px;
+            justify-content: flex-start;
+            max-width: 100vw;
+            overflow: hidden;
+        }
+
+        #canvas {
+            object-fit: contain;
+        }
+
+        .Field {
+            display: flex;
+            flex-direction: column;
+            font-size: 10px;
+            font-weight: bold;
+            line-height: 1;
+            font-family: monospace;
+            color: rgb(70, 3, 36);
+        }
+
+        .Select {
+            display: flex;
+            flex-direction: column;
+            font-size: 10px;
+            font-weight: bold;
+            line-height: 1;
+            font-family: monospace;
+            color: rgb(70, 3, 36);
+        }
+
+        .Checkbox {
+            display: flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: bold;
+            line-height: 1;
+            font-family: monospace;
+            color: rgb(70, 3, 36);
+        }
+
+        .Field-Input {
+            border: none;
+            color: rgb(70, 3, 36);
+            background-color: #fff9ec;
+            line-height: 1;
+            font-size: 12px;
+            padding: 2px;
+        }
+
+        .Field-Input:focus {
+            outline: none;
+        }
+
+        .Gui {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .Button {
+            line-height: 1;
+            font-family: monospace;
+            color: rgb(255, 239, 226);
+            font-size: 12px;
+            padding: 2px;
+            background: rgb(172, 112, 112);
+            border: none;
+        }
+
+        .Separator {
+            height: 16px;
+        }
+
+        .Instruction {
+            color: rgb(100, 62, 62);
+        }
+
+    </style>
+</head>
+<body>
+    <script>
+        function CreateElement(tagName, parent, attributes = {}) {
+            const element = document.createElement(tagName)
+
+            for (const key in attributes) {
+                element[key] = attributes[key]
+            }
+
+            if (parent) {
+                parent.append(element)
+            }
+
+            return element
+        }
+
+        function CreateInput(type, defaultValue, callback) {
+            const input = CreateElement('input')
+            input.value = defaultValue
+            input.type = 'number'
+            input.className = 'Field-Input'
+            input.oninput = function(e) {
+                callback(e.target.value)
+            }
+
+            return input
+        }
+
+        class Gui {
+            constructor(object, parent) {
+                this.object = new Proxy(object, this.handler)
+                this.parent = parent
+                this.inputs = {}
+            }
+
+            setter = (obj, prop, value) => {
+                const input = this.inputs[prop]
+
+                if (input) {
+                    if (input.type == 'checkbox') {
+                        input.checked = value
+                    } else {
+                        input.value = value
+                    }
+                }
+
+                return Reflect.set(obj, prop, value)
+            }
+
+            handler = {
+                set: this.setter
+            }
+
+            Input(name, type, key, callback = () => {}) {
+                const container = document.createElement('div')
+                container.className = 'Field'
+
+                if (type == 'checkbox') {
+                    container.classList = 'Checkbox'
+                }
+
+                const label = document.createElement('label')
+                label.innerHTML = name
+                label.className = 'Label'
+                container.append(label)
+
+                const input = document.createElement('input')
+                input.value = this.object[key]
+                input.type = type
+                input.className = 'Field-Input'
+                input.oninput = (e) => {
+                    let value = e.target.value
+
+                    if (type == 'number') {
+                        value = parseFloat(e.target.value)
+                    }
+
+                    if (type == 'checkbox') {
+                        value = e.target.checked
+                    }
+
+                    this.object[key] = value
+                    callback(value)
+                }
+                this.inputs[key] = input
+                container.append(input)
+
+                this.parent.append(container)
+
+                return container
+            }
+
+            Select(name, key, options, callback = () => {}) {
+                const container = document.createElement('div')
+                container.className = 'Select'
+
+                const label = document.createElement('label')
+                label.innerHTML = name
+                label.className = 'Label'
+                container.append(label)
+
+                const select = document.createElement('select')
+                select.value = this.object[key]
+                select.className = 'Field-Select'
+                select.onchange = (e) => {
+                    this.object[key] = e.target.value
+                    callback(e.target.value)
+                }
+                this.inputs[key] = select
+                container.append(select)
+
+                for (const option of options) {
+                    const optionElement = document.createElement('option')
+                    optionElement.value = option
+                    optionElement.innerHTML = option
+                    select.append(optionElement)
+                }
+
+                this.parent.append(container)
+
+                return container
+            }
+
+            Number(name, key, callback) {
+                this.Input(name, 'number', key, callback)
+            }
+
+            Checkbox(name, key, callback) {
+                this.Input(name, 'checkbox', key, callback)
+            }
+
+            Vec2(name, defaultValue, callback) {
+                const container = document.createElement('div')
+                container.classList = 'Vec2'
+
+                container.append(Gui.CreateInput('number', defaultValue.x, () => {
+                    callback(x)
+                }))
+
+                this.parent.append(container)
+            }
+
+            Button(name, callback) {
+                const button = document.createElement('button')
+                button.className = 'Button'
+                button.innerHTML = name
+                button.onclick = callback
+
+                this.parent.append(button)
+            }
+
+            Separator() {
+                const separator = document.createElement('div')
+                separator.className = 'Separator'
+
+                this.parent.append(separator)
+            }
+        }
+
+    </script>
+    <script>
+        const INCH_MM = 25.4
+
+        function MmToIn(mm) {
+            return mm / INCH_MM
+        }
+
+        function MmToPx(mm, res) {
+            return Math.round(MmToIn(mm) * res)
+        }
+
+        function Clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function Rgb(r, g, b) {
+            return `rgb(${ r }, ${ g }, ${ b })`
+        }
+
+        function Rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+
+        function Dist(vec1, vec2) {
+            return vec1.Sub(vec2).Length()
+        }
+
+        function PointSideOfLine(a, b, p) {
+            const ba = b.Sub(a)
+            const pa = p.Sub(a)
+            const t = (ba.x * pa.x + ba.y * pa.y) / (ba.x * ba.x + ba.y * ba.y)
+            const tp = a.Add(ba.MultScalar(t))
+
+            return p.Sub(tp).Length()
+        }
+
+        function ProjectPointOnLine(a, b, p) {
+            const ba = b.Sub(a)
+            const pa = p.Sub(a)
+            const t = (ba.x * pa.x + ba.y * pa.y) / (ba.x * ba.x + ba.y * ba.y)
+            const tp = a.Add(ba.MultScalar(t))
+
+            return tp
+        }
+
+        function SnapGrid(vec, grid) {
+            const x = Math.round(vec.x / grid.x) * grid.x
+            const y = Math.round(vec.y / grid.y) * grid.y
+
+            return new Vec2(x, y)
+        }
+
+        class Renderer {
+            constructor(d2) {
+                this.d2 = d2;
+            }
+
+            ClearColor(color) {
+                d2.rect(0, 0, d2.canvas.width, d2.canvas.height)
+
+                this.Fill(color)
+            }
+
+            MoveTo(point) {
+                d2.moveTo(point.x, point.y)
+            }
+
+            LineTo(point) {
+                d2.lineTo(point.x, point.y)
+            }
+
+            RenderPolygon(polygon) {
+                d2.beginPath()
+
+                const points = polygon.points
+                const point0 = points[0]
+
+                this.MoveTo(point0)
+
+                for (let i = 1; i < points.length; i++) {
+                    const point = points[i]
+
+                    this.LineTo(point)
+                }
+
+                d2.closePath()
+            }
+
+            RenderLine(pointA, pointB) {
+                d2.beginPath()
+
+                this.MoveTo(pointA)
+                this.LineTo(pointB)
+
+                d2.closePath()
+            }
+
+            RenderAabb(min, max) {
+                d2.beginPath()
+
+                const size = max.Sub(min)
+                d2.rect(min.x, min.y, size.x, size.y)
+
+                d2.closePath()
+            }
+
+            Fill(color) {
+                d2.fillStyle = color
+                d2.fill()
+            }
+
+            Stroke(color, width) {
+                d2.strokeStyle = color
+                d2.lineWidth = width
+                d2.stroke()
+            }
+        }
+
+        class Vec2 {
+            constructor(x = 0, y = 0) {
+                this.x = x
+                this.y = y
+            }
+
+            Add(vec) {
+                return new Vec2(this.x + vec.x, this.y + vec.y)
+            }
+
+            Sub(vec) {
+                return new Vec2(this.x - vec.x, this.y - vec.y)
+            }
+
+            Length() {
+                return Math.sqrt(this.x * this.x + this.y * this.y)
+            }
+
+            Normalize() {
+                const l = this.Length()
+
+                return new Vec2(this.x / l, this.y / l)
+            }
+
+            MultScalar(scalar) {
+                return new Vec2(this.x * scalar, this.y * scalar)
+            }
+
+            DivScalar(scalar) {
+                return new Vec2(this.x / scalar, this.y / scalar)
+            }
+        }
+
+        class Polygon {
+            constructor(points) {
+                this.points = points
+            }
+
+            static FromAabb(min, max) {
+                return new Polygon([
+                    new Vec2(min.x, min.y),
+                    new Vec2(max.x, min.y),
+                    new Vec2(max.x, max.y),
+                    new Vec2(min.x, max.y)
+                ])
+            }
+
+            IsPointInside(point) {
+                const x = point.x
+                const y = point.y
+                let inside = false;
+
+                for (let i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {
+                    var xi = this.points[i].x, yi = this.points[i].y
+                    var xj = this.points[j].x, yj = this.points[j].y
+
+                    let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+
+                    if (intersect) inside = !inside
+                }
+
+                return inside
+            }
+
+            GetCenter() {
+                let sumX = 0;
+                let sumY = 0;
+
+                for (let i = 0; i < this.points.length; i++) {
+                    const point = this.points[i];
+                    sumX += point.x;
+                    sumY += point.y;
+                }
+
+                const meanX = sumX / this.points.length;
+                const meanY = sumY / this.points.length;
+
+                return new Vec2(meanX, meanY);
+            }
+
+            GetMinMax() {
+                let minX = Infinity;
+                let minY = Infinity;
+                let maxX = -Infinity;
+                let maxY = -Infinity;
+
+                for (let i = 0; i < this.points.length; i++) {
+                    const point = this.points[i];
+                    const x = point.x;
+                    const y = point.y;
+
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                }
+
+                return {
+                    min: new Vec2(minX, minY),
+                    max: new Vec2(maxX, maxY)
+                };
+            }
+
+            FindLineIntersections(i, angle, offset) {
+                i = new Vec2(i.x + Math.cos(angle + Math.PI / 2) * offset, i.y + Math.sin(angle + Math.PI / 2) * offset)
+                let j = new Vec2(i.x + Math.cos(angle), i.y + Math.sin(angle))
+  
+                const points = this.points
+                const intersections = []
+
+                for (let a = 0; a < points.length; ++a) {
+                    const k = points[a]
+                    const l = points[(a + 1) % points.length]
+
+                    const d = (l.y - k.y) * (j.x - i.x) - (l.x - k.x) * (j.y - i.y)
+
+                    if (d == 0) {
+                        continue
+                    }
+
+                    const n1 = (l.x - k.x) * (i.y - k.y) - (l.y - k.y) * (i.x - k.x)
+                    const n2 = (j.x - i.x) * (i.y - k.y) - (j.y - i.y) * (i.x - k.x)
+                    const t1 = n1 / d
+                    const t2 = n2 / d
+
+                    if (t2 > 0 && t2 < 1) {
+                        const px = i.x + (t1 * (j.x - i.x))
+                        const py = i.y + (t1 * (j.y - i.y))
+                        const vec = new Vec2(px, py)
+                        vec.index = a
+                        intersections.push(vec)
+                    }
+
+                    if (intersections.length == 2) {
+                        break
+                    }
+                }
+
+                return intersections
+            }
+        }
+    </script>
+    <script>
+        const configuration = {
+            widthMm: 210,
+            widthMm: 210,
+            heightMm: 297,
+            pageMarginMm: 4,
+            panelMarginMm: 2,
+            lineWidthMm: 0.5,
+            resDpi: 300,
+            angle: 45,
+            mode: 'select',
+            gridDiv: 3,
+            zoom: 1,
+            camPos: new Vec2(0, 0),
+            camSpeed: 10,
+            snapToPoints: false,
+            enableCam: false
+        }
+
+        const root = CreateElement('div', document.body, {id: 'root'})
+        const gui = new Gui(configuration, CreateElement('div', root, {className: 'Gui'}))
+        const conf = gui.object
+
+        console.log(conf)
+
+        let widthPx = MmToPx(conf.widthMm, conf.resDpi)
+        let heightPx = MmToPx(conf.heightMm, conf.resDpi)
+        let pageMarginPx = MmToPx(conf.pageMarginMm, conf.resDpi)
+        let panelMarginPx = MmToPx(conf.panelMarginMm, conf.resDpi)
+        let lineWidthPx = MmToPx(conf.lineWidthMm, conf.resDpi)
+        let polygons = []
+        let selectedPolygon = null
+        let intersections = []
+        let intersectionsRight = []
+        const mouse = new Vec2()
+        let minL = Infinity
+        let minP = null
+        let startPoint = null
+        let endPoint = null
+        let selectedMinmax = null
+        let transform = null
+
+        const canvas = CreateElement(
+            'canvas',
+            root,
+            {
+                width: widthPx,
+                height: heightPx
+            }
+        )
+        const d2 = canvas.getContext('2d')
+        const renderer = new Renderer(d2)
+
+        function Reset() {
+            canvas.width = widthPx
+            canvas.height = heightPx
+            polygons = []
+            polygons.push(Polygon.FromAabb(new Vec2(pageMarginPx, pageMarginPx), new Vec2(widthPx - pageMarginPx, heightPx - pageMarginPx)))
+        }
+
+        const keysPressed = {}
+
+        function Render() {
+            if (conf.enableCam) {
+                if (keysPressed['KeyA']) {
+                    conf.camPos.x -= conf.camSpeed
+                }
+
+                if (keysPressed['KeyD']) {
+                    conf.camPos.x += conf.camSpeed
+                }
+
+                if (keysPressed['KeyS']) {
+                    conf.camPos.y -= conf.camSpeed
+                }
+
+                if (keysPressed['KeyW']) {
+                    conf.camPos.y += conf.camSpeed
+                }
+
+                if (keysPressed['KeyQ']) {
+                    conf.zoom -= 0.01
+                }
+
+                if (keysPressed['KeyE']) {
+                    conf.zoom += 0.01
+                }
+            }
+
+            const offsetX = widthPx / 2 + conf.camPos.x;
+            const offsetY = heightPx / 2 - conf.camPos.y;
+
+            renderer.ClearColor(Rgb(255, 255, 255))
+            d2.resetTransform()
+            d2.translate(widthPx / 2, heightPx / 2)
+            d2.scale(conf.zoom , conf.zoom)
+            d2.translate(-widthPx / 2, -heightPx / 2)
+            d2.translate(-conf.camPos.x, conf.camPos.y)
+            transform = d2.getTransform()
+
+            selectedPolygon = null;
+
+            for (const polygon of polygons) {
+                let isInside = false
+
+                if (!selectedPolygon) {
+                    isInside = polygon.IsPointInside(mouse)
+                }
+
+                if (isInside) {
+                    selectedPolygon = polygon
+                } else {
+                    renderer.RenderPolygon(polygon)
+                    renderer.Stroke(Rgb(0, 0, 0), lineWidthPx)
+                }
+            }
+
+            if (selectedPolygon) {
+                renderer.RenderPolygon(selectedPolygon)
+                renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+
+                if (conf.mode == 'anchor_knife') {
+                    minL = Infinity
+                    minP = null
+
+                    for (let a = 0; a < selectedPolygon.points.length; ++a) {
+                        const p1 = selectedPolygon.points[a]
+                        const p2 = selectedPolygon.points[(a + 1) % selectedPolygon.points.length]
+                        const tp = conf.snapToPoints ? p1 : ProjectPointOnLine(p1, p2, mouse)
+                        const l = tp.Sub(mouse).Length()
+
+                        if (l < minL) {
+                            minL = l
+                            minP = tp
+                        }
+                    }
+
+                    if (startPoint) {
+                        const d = startPoint.Sub(mouse)
+                        const angle = Math.atan2(d.y, d.x)
+                        intersectionsLeft = selectedPolygon.FindLineIntersections(startPoint, angle, -panelMarginPx / 2)
+                        intersectionsRight = selectedPolygon.FindLineIntersections(startPoint, angle, panelMarginPx / 2)
+
+                        if (intersectionsLeft.length == 2 && intersectionsRight.length == 2) {
+                            renderer.RenderLine(intersectionsLeft[0], intersectionsLeft[1])
+                            renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                            renderer.RenderLine(intersectionsRight[0], intersectionsRight[1])
+                            renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                        }
+                    } else {
+                        if (minP) {
+                            renderer.RenderLine(minP, mouse)
+                            renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                        }
+                    }
+                } else if (conf.mode == 'knife') {
+                    intersectionsLeft = selectedPolygon.FindLineIntersections(mouse, Rad(conf.angle), -panelMarginPx / 2)
+                    intersectionsRight = selectedPolygon.FindLineIntersections(mouse, Rad(conf.angle), panelMarginPx / 2)
+
+                    if (intersectionsLeft.length == 2 && intersectionsRight.length == 2) {
+                        renderer.RenderLine(intersectionsLeft[0], intersectionsLeft[1])
+                        renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                        renderer.RenderLine(intersectionsRight[0], intersectionsRight[1])
+                        renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                    }
+                } else if (conf.mode == 'half_splitter') {
+                    const center = selectedPolygon.GetCenter()
+                    intersectionsLeft = selectedPolygon.FindLineIntersections(center, Rad(conf.angle), -panelMarginPx / 2)
+                    intersectionsRight = selectedPolygon.FindLineIntersections(center, Rad(conf.angle), panelMarginPx / 2)
+
+                    if (intersectionsLeft.length == 2 && intersectionsRight.length == 2) {
+                        renderer.RenderLine(intersectionsLeft[0], intersectionsLeft[1])
+                        renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                        renderer.RenderLine(intersectionsRight[0], intersectionsRight[1])
+                        renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                    }
+                } else if (conf.mode == 'grid_snapper') {
+                    const minmax = selectedMinmax || selectedPolygon.GetMinMax()
+
+                    const size = minmax.max.Sub(minmax.min)
+                    const relative = mouse.Sub(minmax.min)
+                    p = SnapGrid(relative, size.DivScalar(conf.gridDiv)).Add(minmax.min)
+
+                    renderer.RenderLine(p, mouse)
+                    renderer.Stroke(Rgb(0, 255, 255), lineWidthPx)
+
+                    intersectionsLeft = selectedPolygon.FindLineIntersections(p, Rad(conf.angle), -panelMarginPx / 2)
+                    intersectionsRight = selectedPolygon.FindLineIntersections(p, Rad(conf.angle), panelMarginPx / 2)
+
+                    if (intersectionsLeft.length == 2 && intersectionsRight.length == 2) {
+                        renderer.RenderLine(intersectionsLeft[0], intersectionsLeft[1])
+                        renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                        renderer.RenderLine(intersectionsRight[0], intersectionsRight[1])
+                        renderer.Stroke(Rgb(217, 54, 103), lineWidthPx)
+                    }
+                }
+            }
+
+            if (selectedMinmax) {
+                renderer.RenderAabb(selectedMinmax.min, selectedMinmax.max)
+                renderer.Stroke(Rgb(255, 0, 255), lineWidthPx)
+            }
+
+            requestAnimationFrame(Render)
+        }
+
+
+        document.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect()
+            const scaleX = canvas.width / rect.width
+            const scaleY = canvas.height / rect.height
+            const x = (e.clientX - rect.left) * scaleX
+            const y = (e.clientY - rect.top) * scaleY
+
+            var imatrix = DOMMatrix.fromMatrix(transform).invertSelf()
+            mouse.x = x * imatrix.a + y * imatrix.c + imatrix.e
+            mouse.y = x * imatrix.b + y * imatrix.d + imatrix.f
+        })
+
+        document.addEventListener('mousedown', e => {
+            if (conf.mode == 'grid_snapper' && selectedPolygon) {
+                selectedMinmax = selectedPolygon.GetMinMax()
+            }
+        })
+
+        document.addEventListener('mousewheel', e => {
+            if (conf.mode != 'select') {
+                conf.angle += Math.sign(e.deltaY) * 5
+            }
+        })
+
+        function Cut() {
+            if (selectedPolygon && intersectionsLeft.length == 2 && intersectionsRight.length == 2) {
+                const indexLeftA = intersectionsLeft[0].index
+                const indexLeftB = intersectionsLeft[1].index
+                const indexRightA = intersectionsRight[0].index
+                const indexRightB = intersectionsRight[1].index
+                const pointsLeft = []
+                const pointsRight = []
+
+                for (let a = 0; a < selectedPolygon.points.length; ++a) {
+                    const point = selectedPolygon.points[a]
+                    const l1 = PointSideOfLine(intersectionsLeft[0], intersectionsLeft[1], point)
+                    const l2 = PointSideOfLine(intersectionsRight[0], intersectionsRight[1], point)
+
+                    if (Math.floor(l1 + l2) > panelMarginPx) {
+                        if (l1 < l2) {
+                            pointsLeft.push(point)
+                        } else {
+                            pointsRight.push(point)
+                        }
+                    }
+
+                    if (a == indexLeftA) {
+                        pointsLeft.push(intersectionsLeft[0])
+                    }
+
+                    if (a == indexLeftB) {
+                        pointsLeft.push(intersectionsLeft[1])
+                    }
+
+                    if (a == indexRightA) {
+                        pointsRight.push(intersectionsRight[0])
+                    }
+
+                    if (a == indexRightB) {
+                        pointsRight.push(intersectionsRight[1])
+                    }
+                }
+
+                polygons.push(new Polygon(pointsLeft))
+                polygons.push(new Polygon(pointsRight))
+                polygons.splice(polygons.indexOf(selectedPolygon), 1)
+            }
+        }
+
+        document.addEventListener('keydown', e => {
+            keysPressed[e.code] = true
+
+            if (e.code == 'KeyF') {
+                if (conf.mode == 'anchor_knife') {
+                    if (!startPoint) {
+                        if (minP) {
+                            startPoint = minP
+                        }
+                    } else {
+                        Cut()
+                        startPoint = null
+                    }
+
+                } else if (conf.mode == 'knife') {
+                    Cut()
+                } else if (conf.mode == 'half_splitter') {
+                    Cut()
+                } else if (conf.mode == 'grid_snapper') {
+                    Cut()
+                }
+            } else if (e.code == 'KeyD') {
+                // if (selectedPolygon) {
+                //     polygons.splice(polygons.indexOf(selectedPolygon), 1)
+                //     selectedPolygon = null
+                // }
+            } else if (e.code == 'KeyZ' && e.ctrlKey) {
+
+            }
+
+            if (conf.mode == 'grid_snapper') {
+                if (e.key.charCodeAt(0) >= '2'.charCodeAt(0) && e.key.charCodeAt(0) <='9'.charCodeAt(0)) {
+                    conf.gridDiv = parseInt(e.key)
+                }
+
+                if (e.code == 'KeyR') {
+                    selectedMinmax = null
+                }
+            }
+        })
+
+        document.addEventListener('keyup', e => {
+            keysPressed[e.code] = false
+        })
+
+        Render()
+        Reset()
+
+        gui.Number('Width', 'widthMm', (value) => {
+            widthPx = MmToPx(value, conf.resDpi)
+        })
+
+        gui.Number('Height', 'heightMm', (value) => {
+            heightPx = MmToPx(value, conf.resDpi)
+        })
+
+        gui.Number('Resolution', 'resDpi')
+
+        gui.Number('Page Margin', 'pageMarginMm', (value) => {
+            pageMarginPx = MmToPx(value, conf.resDpi)
+        })
+
+        gui.Number('Panel Margin', 'panelMarginMm', (value) => {
+            panelMarginPx = MmToPx(value, conf.resDpi)
+        })
+
+        gui.Number('Line Width', 'lineWidthMm', (value) => {
+            lineWidthPx = MmToPx(value, conf.resDpi)
+        })
+
+        gui.Number('Knife Angle', 'angle')
+
+        gui.Number('Grid Divider', 'gridDiv')
+
+        gui.Select('Mode', 'mode', ['select', 'knife', 'anchor_knife', 'half_splitter', 'grid_snapper'])
+
+        gui.Checkbox('Snap To Points', 'snapToPoints')
+
+        gui.Checkbox('Enable Cam', 'enableCam')
+
+        gui.Separator()
+
+        gui.Button('Reset', () => {
+            if (confirm('Are you sure you want to reset?')) {
+                Reset()
+            }
+        })
+
+        gui.Button('Reset Cam', () => {
+            conf.camPos.x = 0
+            conf.camPos.y = 0
+            conf.zoom = 1
+        }) 
+
+        gui.Button('Export PNG', () => {
+            conf.zoom = 1
+            conf.camPos = new Vec2(0, 0)
+
+            setTimeout(() => {
+                const link = document.createElement('a')
+                link.download = 'Template.png'
+                link.href = canvas.toDataURL('image/png')
+                link.click()
+            }, 1000)
+        })
+
+        function SerializePolygon(polygon) {
+            let pointsAttrib = ''
+
+            for (const point of polygon.points) {
+                pointsAttrib += point.x + ',' + point.y + ' '
+            }
+
+            return `<polygon points="${ pointsAttrib }" style="fill:transparent;stroke:black;stroke-width:${ lineWidthPx }" />`
+        }
+
+        gui.Button('Export SVG', () => {
+            let out = `<svg xmlns="http://www.w3.org/2000/svg" width="${ widthPx }" height="${ heightPx }">\n`
+
+            for (const polygon of polygons) {
+                out += SerializePolygon(polygon) + '\n'
+            }
+
+            out += '</svg>\n'
+
+            const link = document.createElement('a')
+            link.download = 'Template.svg'
+            link.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(out)
+            link.click()
+        })
+
+        CreateElement('div', gui.parent, {
+            className: 'Instruction',
+            innerHTML: `
+                Controls:<br>
+                A - move left<br>
+                D - move right<br>
+                S - move down<br>
+                W - move up<br>
+                Q - zoom out<br>
+                E - zoom in<br>
+                F - apply/cut<br>
+                R - reset selection<br>
+                LMB - select<br>
+                scroll - change angle
+            `
+        })
+
+    </script>
+</body>
