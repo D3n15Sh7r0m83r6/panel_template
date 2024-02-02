@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <head>
     <style>
         body {
@@ -563,8 +564,15 @@
         const renderer = new Renderer(d2)
 
         function Reset() {
+            widthPx = MmToPx(conf.widthMm, conf.resDpi)
+            heightPx = MmToPx(conf.heightMm, conf.resDpi)
+            pageMarginPx = MmToPx(conf.pageMarginMm, conf.resDpi)
+            panelMarginPx = MmToPx(conf.panelMarginMm, conf.resDpi)
+            lineWidthPx = MmToPx(conf.lineWidthMm, conf.resDpi)
+
             canvas.width = widthPx
             canvas.height = heightPx
+
             polygons = []
             polygons.push(Polygon.FromAabb(new Vec2(pageMarginPx, pageMarginPx), new Vec2(widthPx - pageMarginPx, heightPx - pageMarginPx)))
         }
@@ -898,11 +906,12 @@
                 pointsAttrib += point.x + ',' + point.y + ' '
             }
 
-            return `<polygon points="${ pointsAttrib }" style="fill:transparent;stroke:black;stroke-width:${ lineWidthPx }" />`
+            return `<polygon points="${ pointsAttrib }" />`
         }
 
         gui.Button('Export SVG', () => {
             let out = `<svg xmlns="http://www.w3.org/2000/svg" width="${ widthPx }" height="${ heightPx }">\n`
+            out += `<style>polygon { fill: none; stroke: black; stroke-width: ${ lineWidthPx }; }</style>\n`
 
             for (const polygon of polygons) {
                 out += SerializePolygon(polygon) + '\n'
