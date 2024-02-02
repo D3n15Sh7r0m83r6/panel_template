@@ -1,5 +1,9 @@
 <!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PanelTemplate</title>
     <style>
         body {
             margin: 0;
@@ -10,7 +14,7 @@
             background-color: #ffba92;
             padding: 16px;
             box-sizing: border-box;
-            height: 100%;
+            height: 100vh;
             gap: 16px;
             justify-content: flex-start;
             max-width: 100vw;
@@ -60,6 +64,15 @@
             padding: 2px;
         }
 
+        .Vec2 {
+            display: flex;
+            gap: 8px;
+        }
+
+        .Vec2 input {
+            width: 64px;
+        }
+
         .Field-Input:focus {
             outline: none;
         }
@@ -104,18 +117,6 @@
             }
 
             return element
-        }
-
-        function CreateInput(type, defaultValue, callback) {
-            const input = CreateElement('input')
-            input.value = defaultValue
-            input.type = 'number'
-            input.className = 'Field-Input'
-            input.oninput = function(e) {
-                callback(e.target.value)
-            }
-
-            return input
         }
 
         class Gui {
@@ -171,9 +172,18 @@
                         value = e.target.checked
                     }
 
-                    this.object[key] = value
+                    let temp = this.object
+                    let keys = key.split('.')
+
+                    for (let a = 0; a < keys.length - 1; ++a) {
+                        temp = temp[keys[a]]
+                    }
+
+                    temp[keys[keys.length - 1]] = value
+
                     callback(value)
                 }
+
                 this.inputs[key] = input
                 container.append(input)
 
@@ -186,10 +196,12 @@
                 const container = document.createElement('div')
                 container.className = 'Select'
 
-                const label = document.createElement('label')
-                label.innerHTML = name
-                label.className = 'Label'
-                container.append(label)
+                if (name) {
+                    const label = document.createElement('label')
+                    label.innerHTML = name
+                    label.className = 'Label'
+                    container.append(label)
+                }
 
                 const select = document.createElement('select')
                 select.value = this.object[key]
@@ -225,9 +237,9 @@
                 const container = document.createElement('div')
                 container.classList = 'Vec2'
 
-                container.append(Gui.CreateInput('number', defaultValue.x, () => {
-                    callback(x)
-                }))
+                container.append(this.Input(null, 'number', 'camPos.x'))
+
+                container.append(this.Input(null, 'number', 'camPos.y'))
 
                 this.parent.append(container)
             }
@@ -533,8 +545,6 @@
         const gui = new Gui(configuration, CreateElement('div', root, {className: 'Gui'}))
         const conf = gui.object
 
-        console.log(conf)
-
         let widthPx = MmToPx(conf.widthMm, conf.resDpi)
         let heightPx = MmToPx(conf.heightMm, conf.resDpi)
         let pageMarginPx = MmToPx(conf.pageMarginMm, conf.resDpi)
@@ -556,6 +566,7 @@
             'canvas',
             root,
             {
+                id: 'canvas',
                 width: widthPx,
                 height: heightPx
             }
@@ -873,6 +884,8 @@
 
         gui.Checkbox('Enable Cam', 'enableCam')
 
+        gui.Vec2('Camera Position', 'camPos')
+
         gui.Separator()
 
         gui.Button('Reset', () => {
@@ -944,3 +957,4 @@
 
     </script>
 </body>
+</html>
