@@ -825,11 +825,11 @@
                 } else if (conf.mode == 'grid_snapper') {
                     Cut()
                 }
-            } else if (e.code == 'KeyD') {
-                // if (selectedPolygon) {
-                //     polygons.splice(polygons.indexOf(selectedPolygon), 1)
-                //     selectedPolygon = null
-                // }
+            } else if (e.code == 'Delete') {
+                if (selectedPolygon) {
+                    polygons.splice(polygons.indexOf(selectedPolygon), 1)
+                    selectedPolygon = null
+                }
             } else if (e.code == 'KeyZ' && e.ctrlKey) {
 
             }
