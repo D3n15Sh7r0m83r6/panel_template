@@ -121,27 +121,9 @@
 
         class Gui {
             constructor(object, parent) {
-                this.object = new Proxy(object, this.handler)
+                this.object = object
                 this.parent = parent
                 this.inputs = {}
-            }
-
-            setter = (obj, prop, value) => {
-                const input = this.inputs[prop]
-
-                if (input) {
-                    if (input.type == 'checkbox') {
-                        input.checked = value
-                    } else {
-                        input.value = value
-                    }
-                }
-
-                return Reflect.set(obj, prop, value)
-            }
-
-            handler = {
-                set: this.setter
             }
 
             Input(name, type, key, callback = () => {}) {
@@ -166,6 +148,9 @@
 
                     if (type == 'number') {
                         value = parseFloat(e.target.value)
+                        if (isNaN(value)) {
+                            value = 0
+                        }
                     }
 
                     if (type == 'checkbox') {
@@ -524,7 +509,6 @@
     </script>
     <script>
         const configuration = {
-            widthMm: 210,
             widthMm: 210,
             heightMm: 297,
             pageMarginMm: 4,
