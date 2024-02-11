@@ -578,18 +578,22 @@
             if (conf.enableCam) {
                 if (keysPressed['KeyA']) {
                     conf.camPos.x -= conf.camSpeed
+                    gui.inputs['camPos.x'].value = conf.camPos.x
                 }
 
                 if (keysPressed['KeyD']) {
                     conf.camPos.x += conf.camSpeed
+                    gui.inputs['camPos.x'].value = conf.camPos.x
                 }
 
                 if (keysPressed['KeyS']) {
                     conf.camPos.y -= conf.camSpeed
+                    gui.inputs['camPos.y'].value = conf.camPos.y
                 }
 
                 if (keysPressed['KeyW']) {
                     conf.camPos.y += conf.camSpeed
+                    gui.inputs['camPos.y'].value = conf.camPos.y
                 }
 
                 if (keysPressed['KeyQ']) {
@@ -740,6 +744,7 @@
         document.addEventListener('wheel', e => {
             if (conf.mode != 'select') {
                 conf.angle += Math.sign(e.deltaY) * 5
+                gui.inputs['angle'].value = conf.angle
             }
         })
 
@@ -821,6 +826,7 @@
             if (conf.mode == 'grid_snapper') {
                 if (e.key.charCodeAt(0) >= '2'.charCodeAt(0) && e.key.charCodeAt(0) <='9'.charCodeAt(0)) {
                     conf.gridDiv = parseInt(e.key)
+                    gui.inputs['gridDiv'].value = conf.gridDiv
                 }
 
                 if (e.code == 'KeyR') {
@@ -886,11 +892,17 @@
             conf.camPos.x = 0
             conf.camPos.y = 0
             conf.zoom = 1
+
+            gui.inputs['camPos.x'].value = 0
+            gui.inputs['camPos.y'].value = 0
         }) 
 
         gui.Button('Export PNG', () => {
             conf.zoom = 1
             conf.camPos = new Vec2(0, 0)
+
+            gui.inputs['camPos.x'].value = 0
+            gui.inputs['camPos.y'].value = 0
 
             setTimeout(() => {
                 const link = document.createElement('a')
