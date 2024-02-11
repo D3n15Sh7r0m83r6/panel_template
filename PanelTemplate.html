@@ -753,7 +753,7 @@
             }
         })
 
-        document.addEventListener('mousewheel', e => {
+        document.addEventListener('wheel', e => {
             if (conf.mode != 'select') {
                 conf.angle += Math.sign(e.deltaY) * 5
             }
@@ -878,7 +878,11 @@
 
         gui.Number('Grid Divider', 'gridDiv')
 
-        gui.Select('Mode', 'mode', ['select', 'knife', 'anchor_knife', 'half_splitter', 'grid_snapper'])
+        gui.Select('Mode', 'mode', ['select', 'knife', 'anchor_knife', 'half_splitter', 'grid_snapper'], (e) => {
+            if (conf.mode != 'grid_snapper') {
+                selectedMinmax = null
+            }
+        })
 
         gui.Checkbox('Snap To Points', 'snapToPoints')
 
