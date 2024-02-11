@@ -161,11 +161,14 @@
                 input.value = this.object[key]
                 input.type = type
                 input.className = 'Field-Input'
-                input.oninput = (e) => {
+                input.onblur = (e) => {
                     let value = e.target.value
 
                     if (type == 'number') {
                         value = parseFloat(e.target.value)
+                        if (isNaN(value)) {
+                            value = 0
+                        }
                     }
 
                     if (type == 'checkbox') {
@@ -524,7 +527,6 @@
     </script>
     <script>
         const configuration = {
-            widthMm: 210,
             widthMm: 210,
             heightMm: 297,
             pageMarginMm: 4,
